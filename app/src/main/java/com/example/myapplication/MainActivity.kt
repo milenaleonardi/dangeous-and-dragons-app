@@ -37,8 +37,23 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         // Inicializa os Spinners de Raça e Classe
-        raceSpinner = findViewById(R.id.spinner_race)
-        classSpinner = findViewById(R.id.spinner_class)
+        val raceSpinner: Spinner = findViewById(R.id.spinner_race)
+        val raceAdapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.race_options,
+            android.R.layout.simple_spinner_item
+        )
+        raceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        raceSpinner.adapter = raceAdapter
+
+        val classSpinner: Spinner = findViewById(R.id.spinner_class)
+        val classAdapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.class_options,
+            android.R.layout.simple_spinner_item
+        )
+        classAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        classSpinner.adapter = classAdapter
 
         // Preenche o Spinner de Raça com um ArrayAdapter
         ArrayAdapter.createFromResource(
@@ -49,6 +64,16 @@ class MainActivity : AppCompatActivity() {
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             raceSpinner.adapter = adapter
         }
+
+        raceSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedRace = parent.getItemAtPosition(position).toString()
+                applyRaceBonus(selectedRace)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
 
         // Preenche o Spinner de Classe com um ArrayAdapter
         ArrayAdapter.createFromResource(
@@ -70,6 +95,31 @@ class MainActivity : AppCompatActivity() {
 
         textPointsLeft = findViewById(R.id.text_points_left)
         submitButton = findViewById(R.id.button_submit)
+        submitButton.isEnabled = false
+
+        fun updateSubmitButtonState() {
+            val selectedRace = raceSpinner.selectedItem.toString()
+            val selectedClass = classSpinner.selectedItem.toString()
+            submitButton.isEnabled = selectedRace != "Click here to choose" && selectedClass != "Click here to choose"
+        }
+
+        raceSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedRace = parent.getItemAtPosition(position).toString()
+                applyRaceBonus(selectedRace)
+                updateSubmitButtonState() // Check if we can enable the button
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        classSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                updateSubmitButtonState() // Check if we can enable the button
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
 
         updatePointsLeft()
 
@@ -116,14 +166,65 @@ class MainActivity : AppCompatActivity() {
         }
 
         submitButton.setOnClickListener {
+            val selectedRace = raceSpinner.selectedItem.toString()
+            val selectedClass = classSpinner.selectedItem.toString()
+
+            // Check if all points are distributed
             if (usedPoints < totalPoints) {
                 Toast.makeText(this, "Please distribute all points before submitting!", Toast.LENGTH_SHORT).show()
+            } else if (selectedRace == "Click here to choose" || selectedClass == "Click here to choose") {
+                // Check if both race and class are selected
+                Toast.makeText(this, "Please select both race and class.", Toast.LENGTH_SHORT).show()
             } else {
-                // Proceed with submission
+                // Proceed with submission if both checks pass
                 Toast.makeText(this, "Success! Your character has been created.", Toast.LENGTH_SHORT).show()
             }
         }
+    }
 
+    private fun applyRaceBonus(race: String) {
+        // Reset points to minimum before applying race bonuses
+        strengthPoints = minPoints
+        dexterityPoints = minPoints
+        constitutionPoints = minPoints
+        intelligencePoints = minPoints
+        wisdomPoints = minPoints
+        charismaPoints = minPoints
+
+        when (race) {
+            "Human" -> {
+                strengthPoints += 1
+                dexterityPoints += 1
+                constitutionPoints += 1
+                intelligencePoints += 1
+                wisdomPoints += 1
+                charismaPoints += 1
+                Toast.makeText(this, "Bonus points applied: All attributes +1", Toast.LENGTH_SHORT).show()
+            }
+            "Elf" -> {
+                dexterityPoints += 2
+                Toast.makeText(this, "Bonus points applied: Dexterity +2", Toast.LENGTH_SHORT).show()
+            }
+            "Dwarf" -> {
+                constitutionPoints += 2
+                Toast.makeText(this, "Bonus points applied: Constitution +2", Toast.LENGTH_SHORT).show()
+            }
+            "Orc" -> {
+                strengthPoints += 2
+                constitutionPoints += 1
+                Toast.makeText(this, "Bonus points applied: Strength +1, Constitution +1", Toast.LENGTH_SHORT).show()
+            }
+        }
+        updateAttributesDisplay()
+    }
+
+    private fun updateAttributesDisplay() {
+        strengthValue.text = strengthPoints.toString()
+        dexterityValue.text = dexterityPoints.toString()
+        constitutionValue.text = constitutionPoints.toString()
+        intelligenceValue.text = intelligencePoints.toString()
+        wisdomValue.text = wisdomPoints.toString()
+        charismaValue.text = charismaPoints.toString()
     }
 
     private fun increaseAttribute(attribute: String) {
