@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -41,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var submitButton: Button
 
     val CHANNEL_ID = "my_channel_id"
+    var allowNotification: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -189,6 +191,9 @@ class MainActivity : AppCompatActivity() {
             } else {
                 // Proceed with submission if both checks pass
                 Toast.makeText(this, "Success! Your character has been created.", Toast.LENGTH_SHORT).show()
+                if(allowNotification){
+                    showNotification()
+                }
             }
         }
     }
@@ -364,21 +369,30 @@ class MainActivity : AppCompatActivity() {
 
             val notificationManager: NotificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
-
-            showNotification()
         }
-    }
 
-    val openIntent = Intent(this, MainActivity::class.java)
-    val openPendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_IMMUTABLE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                allowNotification = true
+            } else {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        } else {
+            allowNotification = true
+        }
 
-    val closeIntent = Intent(this, NotificationReceiver::class.java).apply {
-        action = "CLOSE_NOTIFICATION"
     }
-    val closePendingIntent: PendingIntent = PendingIntent.getBroadcast(this, 0, closeIntent, PendingIntent.FLAG_IMMUTABLE)
 
     @SuppressLint("MissingPermission")
     fun showNotification(){
+        val openIntent = Intent(this, MainActivity::class.java)
+        val openPendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        val closeIntent = Intent(this, NotificationReceiver::class.java).apply {
+            action = "CLOSE_NOTIFICATION"
+        }
+        val closePendingIntent: PendingIntent = PendingIntent.getBroadcast(this, 0, closeIntent, PendingIntent.FLAG_IMMUTABLE)
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Hello! Are you around?")
@@ -386,7 +400,7 @@ class MainActivity : AppCompatActivity() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                .bigText("Congratulations! Your character has been created with all attributes distributed. Enjoy your adventure!"))
+                    .bigText("Congratulations! Your character has been created with all attributes distributed. Enjoy your adventure!"))
             .addAction(R.drawable.ic_open, "Open", openPendingIntent)
             .addAction(R.drawable.ic_close, "Close", closePendingIntent)
             .setAutoCancel(true)
@@ -394,4 +408,5 @@ class MainActivity : AppCompatActivity() {
         val notificationManager = NotificationManagerCompat.from(this)
         notificationManager.notify(1, builder.build())
     }
+
 }
